@@ -15,6 +15,11 @@ setup(name='android',
             libraries=[ 'sdl', 'log' ],
             library_dirs=[ 'libs/'+os.environ['ARCH'] ],
             ),
+        Extension(
+            'android_mic', ['android_mic.c'],
+            libraries=[ 'log' ],
+            library_dirs=[ 'libs/'+os.environ['ARCH'] ],
+            ),
 
         ]
       )
