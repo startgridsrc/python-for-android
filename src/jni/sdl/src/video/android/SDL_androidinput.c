@@ -55,7 +55,13 @@ extern float GLES_pwidth;
 extern float GLES_pheight;
 
 JNIEXPORT void JNICALL 
-JAVA_EXPORT_NAME(SDLSurfaceView_nativeMouse) ( JNIEnv*  env, jobject  thiz, jint x, jint y, jint action, jint pointerId, jint force, jint radius )
+JAVA_EXPORT_NAME(SDLSurfaceView_nativeResizeEvent) ( JNIEnv*  env, jobject  thiz, jint x, jint y )
+{
+	SDL_PrivateResize(x, y);
+}
+
+JNIEXPORT void JNICALL 
+JAVA_EXPORT_NAME(SDLSurfaceView_nativeMouse) ( JNIEnv*  env, jobject  thiz, jint x, jint y, jint action, jint pointerId, jint force, jint radius, jint button )
 {
 	if(pointerId < 0)
 		pointerId = 0;
@@ -116,10 +122,10 @@ JAVA_EXPORT_NAME(SDLSurfaceView_nativeMouse) ( JNIEnv*  env, jobject  thiz, jint
 	{
 #if SDL_VERSION_ATLEAST(1,3,0)
 		SDL_SendMouseMotion(NULL, 0, x, y);
-		SDL_SendMouseButton(NULL, (action == MOUSE_DOWN) ? SDL_PRESSED : SDL_RELEASED, 1 );
+		SDL_SendMouseButton(NULL, (action == MOUSE_DOWN) ? SDL_PRESSED : SDL_RELEASED, button );
 #else
 		SDL_PrivateMouseMotion(0, 0, x, y);
-		SDL_PrivateMouseButton( (action == MOUSE_DOWN) ? SDL_PRESSED : SDL_RELEASED, 1, x, y );
+		SDL_PrivateMouseButton( (action == MOUSE_DOWN) ? SDL_PRESSED : SDL_RELEASED, button, x, y );
 #endif
 	}
 	if( action == MOUSE_MOVE ) {
@@ -145,7 +151,7 @@ JAVA_EXPORT_NAME(SDLSurfaceView_nativeKey) ( JNIEnv*  env, jobject thiz, jint ke
 {
 	if( isTrackballUsed )
 		if( processAndroidTrackball(key, action) )
-			return;
+			return 0;
 
 	SDL_keysym keysym;
         SDL_keysym *ks = TranslateKey(key, &keysym);
@@ -245,8 +251,30 @@ void ANDROID_InitOSKeymap()
   keymap[KEYCODE_7] = SDL_KEY(7);
   keymap[KEYCODE_8] = SDL_KEY(8);
   keymap[KEYCODE_9] = SDL_KEY(9);
-  keymap[KEYCODE_STAR] = SDL_KEY(KP_DIVIDE);
-  keymap[KEYCODE_POUND] = SDL_KEY(KP_MULTIPLY);
+
+  keymap[KEYCODE_NUMPAD_0] = SDL_KEY(KP0);
+  keymap[KEYCODE_NUMPAD_1] = SDL_KEY(KP1);
+  keymap[KEYCODE_NUMPAD_2] = SDL_KEY(KP2);
+  keymap[KEYCODE_NUMPAD_3] = SDL_KEY(KP3);
+  keymap[KEYCODE_NUMPAD_4] = SDL_KEY(KP4);
+  keymap[KEYCODE_NUMPAD_5] = SDL_KEY(KP5);
+  keymap[KEYCODE_NUMPAD_6] = SDL_KEY(KP6);
+  keymap[KEYCODE_NUMPAD_7] = SDL_KEY(KP7);
+  keymap[KEYCODE_NUMPAD_8] = SDL_KEY(KP8);
+  keymap[KEYCODE_NUMPAD_9] = SDL_KEY(KP9);
+  keymap[KEYCODE_NUMPAD_ENTER] = SDL_KEY(KP_ENTER);
+  keymap[KEYCODE_NUMPAD_DIVIDE] = SDL_KEY(KP_DIVIDE);
+  keymap[KEYCODE_NUMPAD_MULTIPLY] = SDL_KEY(KP_MULTIPLY);
+  keymap[KEYCODE_NUMPAD_SUBTRACT] = SDL_KEY(KP_MINUS);
+  keymap[KEYCODE_NUMPAD_ADD] = SDL_KEY(KP_PLUS);
+  keymap[KEYCODE_NUMPAD_DOT] = SDL_KEY(KP_PERIOD);
+
+  keymap[KEYCODE_PAGE_UP] = SDL_KEY(PAGEUP);
+  keymap[KEYCODE_PAGE_DOWN] = SDL_KEY(PAGEDOWN);
+  keymap[KEYCODE_MOVE_HOME] = SDL_KEY(HOME);
+  keymap[KEYCODE_MOVE_END] = SDL_KEY(END);
+  keymap[KEYCODE_INSERT] = SDL_KEY(INSERT);
+  keymap[KEYCODE_FORWARD_DEL] = SDL_KEY(DELETE);
 
   keymap[KEYCODE_DPAD_UP] = SDL_KEY(UP);
   keymap[KEYCODE_DPAD_DOWN] = SDL_KEY(DOWN);
@@ -288,8 +316,8 @@ void ANDROID_InitOSKeymap()
   keymap[KEYCODE_TAB] = SDL_KEY(TAB);
   keymap[KEYCODE_SPACE] = SDL_KEY(SPACE);
   keymap[KEYCODE_GRAVE] = SDL_KEY(GRAVE);
-  keymap[KEYCODE_MINUS] = SDL_KEY(KP_MINUS);
-  keymap[KEYCODE_PLUS] = SDL_KEY(KP_PLUS);
+  keymap[KEYCODE_MINUS] = SDL_KEY(MINUS);
+  keymap[KEYCODE_PLUS] = SDL_KEY(PLUS);
   keymap[KEYCODE_EQUALS] = SDL_KEY(EQUALS);
   keymap[KEYCODE_LEFT_BRACKET] = SDL_KEY(LEFTBRACKET);
   keymap[KEYCODE_RIGHT_BRACKET] = SDL_KEY(RIGHTBRACKET);
@@ -301,6 +329,18 @@ void ANDROID_InitOSKeymap()
   keymap[KEYCODE_SHIFT_RIGHT] = SDL_KEY(RSHIFT);
   keymap[KEYCODE_DEL] = SDL_KEY(BACKSPACE);
   keymap[KEYCODE_AT] = SDL_KEY(AT);
+  keymap[KEYCODE_F1] = SDL_KEY(F1);
+  keymap[KEYCODE_F2] = SDL_KEY(F2);
+  keymap[KEYCODE_F3] = SDL_KEY(F3);
+  keymap[KEYCODE_F4] = SDL_KEY(F4);
+  keymap[KEYCODE_F5] = SDL_KEY(F5);
+  keymap[KEYCODE_F6] = SDL_KEY(F6);
+  keymap[KEYCODE_F7] = SDL_KEY(F7);
+  keymap[KEYCODE_F8] = SDL_KEY(F8);
+  keymap[KEYCODE_F9] = SDL_KEY(F9);
+  keymap[KEYCODE_F10] = SDL_KEY(F10);
+  keymap[KEYCODE_F11] = SDL_KEY(F11);
+  keymap[KEYCODE_F12] = SDL_KEY(F12);
 }
 
 static float dx = 0.04, dy = 0.1, dz = 0.1; // For accelerometer

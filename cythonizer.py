@@ -15,7 +15,7 @@ class cythonizer():
                 print "!! Haven't found path:", repr(path)
                 sys.exit()
         
-        self.gcc     = "%s/toolchains/arm-linux-androideabi-4.4.3/prebuilt/linux-x86/bin/arm-linux-androideabi-gcc"  %(self.android_ndk)
+        self.gcc     = "%s/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin/arm-linux-androideabi-gcc"  %(self.android_ndk)
         self.sysroot = "%s/platforms/android-%s/arch-arm"                                                            %(self.android_ndk, self.android_api)
         self.a_incl  = "-I%s/platforms/android-%s/arch-arm/usr/include"                                                %(self.android_ndk, self.android_api)
         self.p_incl  = "-I%s/build/python-install/include/python2.7"                                                   %(self.py_for_a)

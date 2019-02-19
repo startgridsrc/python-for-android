@@ -1,0 +1,7 @@
+<inset
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:drawable="@drawable/ic_foreground_trimmed"
+    android:insetLeft="40.741%"
+    android:insetTop="40.741%"
+    android:insetRight="40.741%"
+    android:insetBottom="40.741%" />

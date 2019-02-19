@@ -362,13 +362,17 @@ GLES_ActivateRenderer(SDL_Renderer * renderer)
         return -1;
     }
 
-    float pwidth = window->display->desktop_mode.w;
-    float pheight = window->display->desktop_mode.h;
+    //float pwidth = window->display->desktop_mode.w;
+    //float pheight = window->display->desktop_mode.h;
+    float pwidth = window->w;
+    float pheight = window->h;
     float vwidth = window->w;
     float vheight = window->h;
 
+
     float physical_ar = pwidth / pheight;
     float virtual_ar = vwidth / vheight;
+
 
     float x_padding, y_padding;    
 

@@ -38,7 +38,7 @@ import android.opengl.GLSurfaceView;
 import android.view.MotionEvent;
 import android.view.KeyEvent;
 import android.net.Uri;
-import android.os.PowerManager;
+import android.graphics.PixelFormat;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -266,6 +266,14 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
 		private int[] mValue = new int[1];
 	}
 
+
+    public interface OnInterceptTouchListener {
+        boolean onTouch(MotionEvent ev);
+    }
+
+    private OnInterceptTouchListener mOnInterceptTouchListener = null;
+
+
     // The activity we're a part of.
     private static PythonActivity mActivity;
 
@@ -318,8 +326,6 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
     // This stores the state of the pause system.
     static int mPause = PAUSE_NOT_PARTICIPATING;
 
-    private PowerManager.WakeLock wakeLock;
-
     // The width and height. (This should be set at startup time -
     // these values just prevent segfaults and divide by zero, etc.)
     int mWidth = 100;
@@ -334,8 +340,11 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
     // The resource manager we use.
     ResourceManager mResourceManager;
 
-	// Our own view
-	static SDLSurfaceView instance = null;
+    // Access to our meta-data
+    private ApplicationInfo ai;
+    
+    // Our own view
+    static SDLSurfaceView instance = null;
 
     public SDLSurfaceView(Activity act, String argument) {
         super(act);
@@ -347,13 +356,16 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
 
         SurfaceHolder holder = getHolder();
         holder.addCallback(this);
-        holder.setType(SurfaceHolder.SURFACE_TYPE_GPU);
+        holder.setFormat(PixelFormat.RGBA_8888);
 
         mFilesDirectory = mActivity.getFilesDir().getAbsolutePath();
         mArgument = argument;
 
-        PowerManager pm = (PowerManager) act.getSystemService(Context.POWER_SERVICE);
-        wakeLock = pm.newWakeLock(PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "Screen On");
+	try {
+    	    ai = act.getPackageManager().getApplicationInfo(
+                    				act.getPackageName(), PackageManager.GET_META_DATA);
+    	} catch (PackageManager.NameNotFoundException e) {
+        }
     }
 
 
@@ -437,8 +449,6 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
             }
         }
 
-        wakeLock.release();
-
     }
 
     /**
@@ -455,7 +465,6 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
                 this.notifyAll();
             }
         }
-        wakeLock.acquire();
     }
 
 	public void onDestroy() {
@@ -463,18 +472,18 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
 		synchronized (this) {
 			this.notifyAll();
 
-			if ( mPause == PAUSE_STOP_ACK ) {
-				Log.d(TAG, "onDestroy() app already leaved.");
+			if ( mPause == PAUSE_WAIT_FOR_RESUME ) {
+				Log.d(TAG, "onDestroy() app already left.");
 				return;
 			}
 
 			// application didn't leave, give 10s before closing.
 			// hopefully, this could be enough for launching the on_stop() trigger within the app.
-			mPause = PAUSE_STOP_REQUEST;
+			mPause = PAUSE_REQUEST;
 			int i = 50;
 
 			Log.d(TAG, "onDestroy() stop requested, wait for an event from the app");
-			for (; i >= 0 && mPause == PAUSE_STOP_REQUEST; i--) {
+			for (; i >= 0 && mPause == PAUSE_REQUEST; i--) {
 				try {
 					this.wait(200);
 				} catch (InterruptedException e) {
@@ -575,6 +584,26 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
 					Log.i(TAG, "Try to use graphics config R8G8B8A8S8");
 					ConfigChooser chooser = new ConfigChooser(8, 8, 8, 8, 0, 0);
 					mEglConfig = chooser.chooseConfig(mEgl, mEglDisplay);
+ 				} else if (configToTest == 1) {
+                    			Log.i(TAG, "Try to use graphics config R8G8B8A8S8 ai");
+                    			ConfigChooser chooser = new ConfigChooser(
+                            		// rgba
+                            		8, 8, 8, 8,
+                            		// depth
+                            		ai.metaData.getInt("surface.depth", 0),
+                            		// stencil
+                            		ai.metaData.getInt("surface.stencil", 8));
+                    			mEglConfig = chooser.chooseConfig(mEgl, mEglDisplay);
+				} else if (configToTest == 2) {
+                    			Log.i(TAG, "Try to use graphics config R5G6B5S8");
+                    			ConfigChooser chooser = new ConfigChooser(
+                            		// rgba
+                            		5, 6, 5, 0,
+                            		// depth
+                            		ai.metaData.getInt("surface.depth", 0),
+                            		// stencil
+                            		ai.metaData.getInt("surface.stencil", 8));
+                    			mEglConfig = chooser.chooseConfig(mEgl, mEglDisplay);
 				} else {
 					Log.e(TAG, "Unable to find a correct surface for this device !");
 					break;
@@ -617,6 +646,8 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
         ApplicationInfo appInfo;
         PackageManager packMgmr = mActivity.getApplication().getPackageManager();
 
+        Log.i(TAG, "package name = " + mActivity.getPackageName());
+        
         try {
             appInfo = packMgmr.getApplicationInfo(mActivity.getPackageName(), 0);
             apkFilePath = appInfo.sourceDir;
@@ -624,6 +655,8 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
             apkFilePath = "";
         }
 		
+        Log.i(TAG, "ANDROID_APK = " + apkFilePath);
+        
         nativeResize(mWidth, mHeight);
         nativeInitJavaCallbacks();
         nativeSetEnv("ANDROID_PRIVATE", mFilesDirectory);
@@ -812,7 +845,7 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
                 try {
                     this.wait(250);
                 } catch (InterruptedException e) {
-                    continue;
+                    //continue;
                 }
             }
         }
@@ -843,6 +876,7 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
     }
 
     public boolean createSurface() {
+	try {
         mChanged = false;
 
         // Destroy the old surface.
@@ -864,8 +898,9 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
         // Make the new surface current.
         boolean rv = mEgl.eglMakeCurrent(
             mEglDisplay, mEglSurface, mEglSurface, mEglContext);
-		if (!rv) {
-			mEglSurface = null;
+
+        if (!rv) {
+            mEglSurface = null;
 			return false;
 		}
 
@@ -874,6 +909,11 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
         }
 
 		return true;
+	} catch (IllegalArgumentException e) {
+	    Log.i(TAG, "createSurface() failed");
+	    // maybe because the app stopped?
+		return false;
+	}
 
     }
 
@@ -902,80 +942,110 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
     @Override
     public boolean onTouchEvent(final MotionEvent event) {
 
-		if (mInputActivated == false)
-			return true;
+        if (mInputActivated == false)
+            return true;
 
-		int action = event.getAction() & MotionEvent.ACTION_MASK;
-		int sdlAction = -1;
-		int pointerId = -1;
-		int pointerIndex = -1;
+        if (mOnInterceptTouchListener != null)
+            if (mOnInterceptTouchListener.onTouch(event))
+                return false;
 
-		switch ( action ) {
-			case MotionEvent.ACTION_DOWN:
-			case MotionEvent.ACTION_POINTER_DOWN:
-				sdlAction = 0;
-				break;
-			case MotionEvent.ACTION_MOVE:
-				sdlAction = 2;
-				break;
-			case MotionEvent.ACTION_UP:
-			case MotionEvent.ACTION_POINTER_UP:
-				sdlAction = 1;
-				break;
-		}
+        int action = event.getAction();
+        int sdlAction = -1;
 
-		// http://android-developers.blogspot.com/2010/06/making-sense-of-multitouch.html
-		switch ( action  & MotionEvent.ACTION_MASK ) {
-			case MotionEvent.ACTION_DOWN:
-			case MotionEvent.ACTION_MOVE:
-			case MotionEvent.ACTION_UP:
-				pointerIndex = event.findPointerIndex(mActivePointerId);
-				break;
-			case MotionEvent.ACTION_POINTER_DOWN:
-			case MotionEvent.ACTION_POINTER_UP:
-				pointerIndex = (event.getAction() & MotionEvent.ACTION_POINTER_INDEX_MASK)
-					>> MotionEvent.ACTION_POINTER_INDEX_SHIFT;
-				if ( action == MotionEvent.ACTION_POINTER_UP ) {
-					pointerId = event.getPointerId(pointerIndex);
-					if ( pointerId == mActivePointerId )
-						mActivePointerId = event.getPointerId(pointerIndex == 0 ? 1 : 0);
-				}
-				break;
-		}
 
-		if ( sdlAction >= 0 ) {
+	if (event.getPointerCount() > 2){
+	    return true;
+	}
 
-			for ( int i = 0; i < event.getPointerCount(); i++ ) {
+	if (event.getPointerCount() == 2){
+		SDLSurfaceView.nativeMouse(
+                            (int)0,
+                            (int)2,
+                            0,
+			    0,
+                            1,
+                            1);
 
-				if ( pointerIndex == -1 || pointerIndex == i ) {
+		SDLSurfaceView.nativeMouse(
+                            (int)2,
+                            (int)0,
+                            1,
+			    0,
+                            1,
+                            1);
 
-					/**
-        			Log.i("python", String.format("mouse id=%d action=%d x=%f y=%f",
-							event.getPointerId(i),
-							sdlAction,
-							event.getX(i),
-							event.getY(i)
-					));
-					**/
-					SDLSurfaceView.nativeMouse(
-							(int)event.getX(i),
-							(int)event.getY(i),
-							sdlAction,
-							event.getPointerId(i),
-							(int)(event.getPressure(i) * 1000.0),
-							(int)(event.getSize(i) * 1000.0));
-				}
+		SDLSurfaceView.nativeMouse(
+                            (int)event.getX(0),
+                            (int)event.getY(0),
+                            0,
+			    0,
+                            1,
+                            1);
 
-			}
+		SDLSurfaceView.nativeMouse(
+                            (int)event.getX(1),
+                            (int)event.getY(1),
+                            1,
+			    0,
+                            1,
+                            1);
 
-		}
+	   	return true;
+	}
+
+
+
+		// if not down or move, assume mouse up
+        switch ( action ) {
+            case MotionEvent.ACTION_DOWN:
+                sdlAction = 0;
+                break;
+            case MotionEvent.ACTION_MOVE:
+                sdlAction = 2;
+                break;
+            default:
+                sdlAction = 1;
+                break;
+        }
+
+        // http://android-developers.blogspot.com/2010/06/making-sense-of-multitouch.html
+        
+        if ( sdlAction >= 0 ) {
+
+                    /**
+                      Log.i("python", String.format("mouse id=%d action=%d x=%f y=%f",
+                      event.getPointerId(i),
+                      sdlAction,
+                      event.getX(i),
+                      event.getY(i)
+                      ));
+                     **/
+/**
+Log.i("python", String.format("mouse at x=%d y=%d",
+                          (int)event.getRawX(),
+					(int)event.getRawY()
+));
+**/
+
+// for pointerID always use 0, not sure what it does
+
+                    SDLSurfaceView.nativeMouse(
+                            (int)event.getX(0),
+                            (int)event.getY(0),
+                            sdlAction,
+			    0,
+                            1,
+                            1);
+
+        }
 
         return true;
+
     };
 
     @Override
     public boolean onKeyDown(int keyCode, final KeyEvent event) {
-        //Log.i("python", String.format("key down %d", keyCode));
+        //Log.i("python", String.format("key down keyCode=%d, char=%s", keyCode, event.getUnicodeChar()));
         if (mInputActivated && nativeKey(keyCode, 1, event.getUnicodeChar())) {
             return true;
         } else {
@@ -994,8 +1064,13 @@ public class SDLSurfaceView extends SurfaceView implements SurfaceHolder.Callbac
     }
 
     static void activateInput() {
-        mInputActivated = true;
+        if (!mInputActivated){
+		mInputActivated = true;
+	   } else {
+		mInputActivated = false;
+	   }
     }
+
 
 	static void openUrl(String url) {
 		Log.i("python", "Opening URL: " + url);

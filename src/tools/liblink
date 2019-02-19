@@ -71,8 +71,11 @@ f = open(output + ".libs", "w")
 f.write(" ".join(libs))
 f.close()
 
+#sys.exit(subprocess.call([
+#    environ.get('LD'), '-r',
+#    '-o', output + '.o', '-arch',
+#    environ.get('ARCH')] + objects))
 sys.exit(subprocess.call([
     environ.get('LD'), '-r',
-    '-o', output + '.o', '-arch',
-    environ.get('ARCH')] + objects))
+    '-o', output + '.o'] + objects))
 

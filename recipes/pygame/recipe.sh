@@ -34,6 +34,7 @@ function build_pygame() {
 	CFLAGS="$CFLAGS -I$JNI_PATH/sdl_ttf -I$JNI_PATH/sdl_image"
 	export CFLAGS="$CFLAGS"
 	export LDFLAGS="$LDFLAGS -L$LIBS_PATH -L$SRC_PATH/obj/local/$ARCH/ -lm -lz"
+	info "flags are $LDFLAGS"
 	export LDSHARED="$LIBLINK"
 	try $BUILD_PATH/python-install/bin/python.host setup.py install -O2
 	try find build/lib.* -name "*.o" -exec $STRIP {} \;
