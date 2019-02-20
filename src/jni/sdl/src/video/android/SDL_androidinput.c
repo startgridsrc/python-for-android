@@ -62,6 +62,7 @@ JAVA_EXPORT_NAME(SDLSurfaceView_nativeResizeEvent) ( JNIEnv*  env, jobject  thiz
 
 JNIEXPORT void JNICALL 
 JAVA_EXPORT_NAME(SDLSurfaceView_nativeMouse) ( JNIEnv*  env, jobject  thiz, jint x, jint y, jint action, jint pointerId, jint force, jint radius, jint button )
+
 {
 	if(pointerId < 0)
 		pointerId = 0;

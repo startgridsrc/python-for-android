@@ -151,7 +151,7 @@ function push_arm() {
 	fi
 
 	if [ "X$ANDROIDNDKVER" == "Xr13b" ]; then
-		export TOOLCHAIN_PREFIX=arm-linux-androideabi
+		export TOOLCHAIN_PREFIX=aarch64-linux-android
 		export TOOLCHAIN_VERSION=4.9
 	else
 		#if [ "X${ANDROIDNDKVER:0:2}" == "Xr7" ] || [ "X$ANDROIDNDKVER" == "Xr8" ]; then
@@ -295,8 +295,8 @@ function run_prepare() {
 	debug "NDK version is $ANDROIDNDKVER"
 	debug "API level set to $ANDROIDAPI"
 
-	export NDKPLATFORM="$ANDROIDNDK/platforms/android-$ANDROIDAPI/arch-arm"
-	export ARCH="armeabi"
+	export NDKPLATFORM="$ANDROIDNDK/platforms/android-$ANDROIDAPI/arch-arm64"
+	export ARCH="arm64-v8a"
 	#export ARCH="armeabi-v7a" # not tested yet.
 
 	info "Check mandatory tools"

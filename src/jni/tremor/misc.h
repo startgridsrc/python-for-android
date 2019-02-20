@@ -33,25 +33,17 @@
 #include <sys/types.h>
 #endif
 
-#if BYTE_ORDER==LITTLE_ENDIAN
-union magic {
-  struct {
-    ogg_int32_t lo;
-    ogg_int32_t hi;
-  } halves;
-  ogg_int64_t whole;
-};
-#endif 
 
-#if BYTE_ORDER==BIG_ENDIAN
 union magic {
   struct {
-    ogg_int32_t hi;
     ogg_int32_t lo;
+    ogg_int32_t hi;
   } halves;
   ogg_int64_t whole;
 };
-#endif
+ 
+
+
 
 STIN ogg_int32_t MULT32(ogg_int32_t x, ogg_int32_t y) {
   union magic magic;
