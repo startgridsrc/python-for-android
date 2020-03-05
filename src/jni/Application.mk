@@ -8,5 +8,5 @@ APP_PROJECT_PATH := $(call my-dir)/..
 APP_MODULES := application sdl sdl_main tremor png jpeg freetype sdl_ttf sdl_image sqlite3
 
 APP_ABI := $(ARCH)
-APP_STL := gnustl_static
+#APP_STL := gnustl_static
 APP_CFLAGS += $(OFLAG)
